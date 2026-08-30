@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Registro de Produção</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12141a">
+<style>
+  :root{
+    --bg:#12141a; --card:#1c1f28; --card2:#242834; --border:#2e3340;
+    --text:#f0f1f5; --muted:#9aa1b0; --accent:#3ecf8e; --accent-dim:#1f6e4c;
+    --danger:#e0546a; --warn:#e0a63e;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+  #app{max-width:520px;margin:0 auto;padding:16px 16px 100px;min-height:100vh;}
+  h1{font-size:19px;font-weight:700;margin:4px 0 2px;}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:18px;}
+  .tabs{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);
+    border-top:1px solid var(--border);max-width:520px;margin:0 auto;z-index:50;}
+  .tab{flex:1;text-align:center;padding:12px 4px 10px;font-size:12px;color:var(--muted);
+    background:none;border:none;font-weight:600;}
+  .tab.active{color:var(--accent);}
+  .tab .ic{display:block;font-size:19px;margin-bottom:2px;}
+  .view{display:none;} .view.active{display:block;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
+  .recipe-btn{width:100%;text-align:left;background:var(--card);border:1px solid var(--border);
+    border-radius:14px;padding:16px;margin-bottom:10px;color:var(--text);font-size:16px;font-weight:600;
+    display:flex;justify-content:space-between;align-items:center;}
+  .recipe-btn .cnt{color:var(--muted);font-weight:400;font-size:12.5px;}
+  .backrow{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
+  .backbtn{background:none;border:none;color:var(--accent);font-size:15px;font-weight:600;padding:4px 0;}
+  .step-btn{width:100%;border-radius:14px;padding:18px 16px;margin-bottom:10px;border:1px solid var(--border);
+    background:var(--card);color:var(--text);text-align:left;display:flex;justify-content:space-between;
+    align-items:center;font-size:16px;font-weight:600;}
+  .step-btn.running{background:linear-gradient(135deg,var(--accent-dim),#164a34);border-color:var(--accent);}
+  .step-btn .timer{font-variant-numeric:tabular-nums;font-size:15px;font-weight:700;color:var(--accent);}
+  .step-btn.running .timer{color:#c9ffe6;}
+  .step-btn .lbl{display:flex;flex-direction:column;gap:2px;}
+  .step-btn .hint{font-size:11.5px;font-weight:400;color:var(--muted);}
+  .step-btn.running .hint{color:#bfe9d4;}
+  input,textarea{width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);
+    border-radius:10px;padding:12px;font-size:15px;margin-bottom:8px;font-family:inherit;}
+  label{font-size:12.5px;color:var(--muted);display:block;margin-bottom:4px;margin-top:8px;}
+  .btn{display:block;width:100%;text-align:center;background:var(--accent);color:#08281a;border:none;
+    border-radius:12px;padding:14px;font-size:15px;font-weight:700;margin-top:10px;}
+  .btn.secondary{background:var(--card2);color:var(--text);border:1px solid var(--border);}
+  .btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger);}
+  .fab{position:fixed;bottom:78px;right:calc(50% - 260px + 16px);max-width:520px;background:var(--accent);
+    color:#08281a;border:none;width:52px;height:52px;border-radius:50%;font-size:26px;font-weight:700;
+    box-shadow:0 6px 18px rgba(0,0,0,.4);z-index:40;}
+  @media(max-width:560px){.fab{right:16px;}}
+  .steprow{display:flex;gap:8px;margin-bottom:8px;align-items:center;}
+  .steprow input{margin-bottom:0;}
+  .steprow .rm{background:var(--card2);border:1px solid var(--border);color:var(--danger);
+    border-radius:8px;width:38px;height:38px;flex:none;font-size:16px;}
+  .hist-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:11px 13px;
+    margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;}
+  .hist-item .l{display:flex;flex-direction:column;}
+  .hist-item .rec{font-size:11.5px;color:var(--muted);}
+  .hist-item .step{font-size:14.5px;font-weight:600;}
+  .hist-item .times{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .hist-item .dur{font-size:15px;font-weight:700;color:var(--accent);white-space:nowrap;}
+  .summary-row{display:flex;justify-content:space-between;font-size:13.5px;padding:6px 0;border-bottom:1px solid var(--border);}
+  .summary-row:last-child{border-bottom:none;}
+  .empty{color:var(--muted);text-align:center;padding:40px 12px;font-size:14px;}
+  .toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:var(--card2);
+    border:1px solid var(--border);padding:9px 16px;border-radius:20px;font-size:13px;z-index:100;
+    opacity:0;transition:opacity .25s;pointer-events:none;}
+  .toast.show{opacity:1;}
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .cal-head button{background:var(--card2);border:1px solid var(--border);color:var(--text);
+    border-radius:8px;width:34px;height:34px;font-size:16px;}
+  .cal-head .mtitle{font-weight:700;font-size:15px;text-transform:capitalize;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px;}
+  .cal-dow{text-align:center;font-size:11px;color:var(--muted);font-weight:700;padding-bottom:4px;}
+  .cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    border-radius:10px;background:var(--card);border:1px solid var(--border);font-size:13px;position:relative;color:var(--text);}
+  .cal-day.empty2{background:none;border:none;}
+  .cal-day.today{border-color:var(--accent);}
+  .cal-day.selected{background:var(--accent);color:#08281a;font-weight:700;}
+  .cal-day .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);margin-top:2px;}
+  .cal-day.selected .dot{background:#08281a;}
+  .login-wrap{padding-top:60px;}
+  .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);
+    border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .link-btn{background:none;border:none;color:var(--accent);font-size:13.5px;padding:8px 0;width:100%;text-align:center;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- LOGIN -->
+  <div class="view active" id="view-login">
+    <div class="login-wrap">
+      <h1>Registro de Produção</h1>
+      <div class="sub">Entre para acessar seus dados em qualquer aparelho</div>
+      <div class="card">
+        <label>E-mail</label>
+        <input id="lg-email" type="email" autocomplete="username">
+        <label>Senha</label>
+        <input id="lg-pass" type="password" autocomplete="current-password">
+        <button class="btn" onclick="fazerLogin()">Entrar</button>
+        <button class="link-btn" onclick="criarConta()">Não tenho conta — criar agora</button>
+        <div id="lg-err" style="color:var(--danger);font-size:13px;margin-top:6px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRODUÇÃO -->
+  <div class="view" id="view-producao">
+    <h1>Produção</h1>
+    <div class="sub" id="prod-sub">Selecione a receita que vai preparar</div>
+    <div id="prod-list"></div>
+  </div>
+
+  <!-- RECEITAS -->
+  <div class="view" id="view-receitas">
+    <h1>Receitas</h1>
+    <div class="sub">Cadastre uma vez, use sempre</div>
+    <div id="receitas-list"></div>
+    <button class="fab" onclick="abrirForm()">+</button>
+  </div>
+
+  <!-- FORM RECEITA -->
+  <div class="view" id="view-form">
+    <div class="backrow"><button class="backbtn" onclick="mostrar('receitas')">‹ Voltar</button></div>
+    <h1 id="form-title">Nova receita</h1>
+
+    <input type="file" accept="image/*" capture="environment" id="photo-input" style="display:none" onchange="reconhecerFoto(event)">
+    <button class="btn secondary" onclick="document.getElementById('photo-input').click()" id="photo-btn">📷 Reconhecer por foto</button>
+    <div id="photo-status" style="font-size:12.5px;color:var(--muted);margin:4px 0 10px;"></div>
+
+    <label>Nome da receita</label>
+    <input id="f-nome" placeholder="Ex: Pão de queijo">
+    <label>Etapas de produção</label>
+    <div id="f-steps"></div>
+    <button class="btn secondary" onclick="addStepField()">+ Adicionar etapa</button>
+    <button class="btn" onclick="salvarReceita()">Salvar receita</button>
+    <button class="btn danger" id="f-del" style="display:none" onclick="excluirReceita()">Excluir receita</button>
+  </div>
+
+  <!-- HISTÓRICO / CALENDÁRIO -->
+  <div class="view" id="view-historico">
+    <h1>Calendário</h1>
+    <div class="sub" id="hist-sub">Toque em um dia para ver os registros</div>
+    <div class="cal-head">
+      <button onclick="mudarMes(-1)">‹</button>
+      <span class="mtitle" id="cal-title"></span>
+      <button onclick="mudarMes(1)">›</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div id="hist-list"></div>
+  </div>
+
+</div>
+
+<div class="tabs" id="tabs" style="display:none">
+  <button class="tab active" data-v="producao" onclick="mostrar('producao')"><span class="ic">⏱</span>Produção</button>
+  <button class="tab" data-v="receitas" onclick="mostrar('receitas')"><span class="ic">📋</span>Receitas</button>
+  <button class="tab" data-v="historico" onclick="mostrar('historico')"><span class="ic">📅</span>Calendário</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ===== CONFIGURAÇÃO — preencha antes de usar ===== -->
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyA8ValdJaG89m5I_PRdeJ_VhjedgVnGSZs",
+    authDomain: "registro-producao-fdd93.firebaseapp.com",
+    projectId: "registro-producao-fdd93",
+    storageBucket: "registro-producao-fdd93.firebasestorage.app",
+    messagingSenderId: "108812494501",
+    appId: "1:108812494501:web:b66dfe0255ac2b1d9b4f4c"
+  };
+  const WORKER_URL = "https://registro-producao-proxy.felipeperoniluiz.workers.dev";
+</script>
+<!-- ================================================== -->
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+<script>
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+let uid = null;
+
+let recipes = [];
+let history = [];
+let activeRecipe = null;
+let running = {};
+let tickInterval = null;
+let editingRecipeId = null;
+let stepFieldCount = 0;
+let unsubRecipes=null, unsubHistory=null, unsubRunning=null;
+
+let calYear, calMonth, selectedDay = null;
+(function(){ const t=new Date(); calYear=t.getFullYear(); calMonth=t.getMonth(); })();
+
+auth.onAuthStateChanged(user=>{
+  if(user){
+    uid = user.uid;
+    document.getElementById('view-login').classList.remove('active');
+    document.getElementById('tabs').style.display='flex';
+    mostrar('producao');
+    subscribe();
+  } else {
+    uid = null;
+    if(unsubRecipes) unsubRecipes(); if(unsubHistory) unsubHistory(); if(unsubRunning) unsubRunning();
+    document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+    document.getElementById('view-login').classList.add('active');
+    document.getElementById('tabs').style.display='none';
+  }
+});
+function fazerLogin(){
+  const email=document.getElementById('lg-email').value.trim();
+  const pass=document.getElementById('lg-pass').value;
+  document.getElementById('lg-err').textContent='';
+  auth.signInWithEmailAndPassword(email,pass).catch(e=>{
+    document.getElementById('lg-err').textContent = traduzErroAuth(e);
+  });
+}
+function criarConta(){
+  const email=document.getElementById('lg-email').value.trim();
+  const pass=document.getElementById('lg-pass').value;
+  document.getElementById('lg-err').textContent='';
+  if(!email||!pass||pass.length<6){
+    document.getElementById('lg-err').textContent='Preencha e-mail e senha (mínimo 6 caracteres).';
+    return;
+  }
+  auth.createUserWithEmailAndPassword(email,pass).catch(e=>{
+    document.getElementById('lg-err').textContent = traduzErroAuth(e);
+  });
+}
+function traduzErroAuth(e){
+  const c=e.code||'';
+  if(c.includes('wrong-password')||c.includes('invalid-credential')) return 'Senha incorreta.';
+  if(c.includes('user-not-found')) return 'Conta não encontrada — toque em "criar agora".';
+  if(c.includes('email-already-in-use')) return 'Esse e-mail já tem conta — só entrar.';
+  if(c.includes('invalid-email')) return 'E-mail inválido.';
+  return 'Erro: '+ (e.message||c);
+}
+
+function subscribe(){
+  unsubRecipes = db.collection('users').doc(uid).collection('recipes')
+    .onSnapshot(snap=>{
+      recipes = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      renderProducao(); renderReceitas();
+    });
+  unsubHistory = db.collection('users').doc(uid).collection('history')
+    .orderBy('start','desc').limit(1000)
+    .onSnapshot(snap=>{
+      history = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      renderCalendar();
+    });
+  unsubRunning = db.collection('users').doc(uid).collection('state').doc('running')
+    .onSnapshot(doc=>{
+      running = doc.exists ? (doc.data().steps||{}) : {};
+      renderProducao();
+    });
+}
+async function saveRunning(){
+  await db.collection('users').doc(uid).collection('state').doc('running').set({steps:running});
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+function mostrar(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
+  const tab=document.querySelector('.tab[data-v="'+v+'"]');
+  if(tab) tab.classList.add('active');
+  if(v==='producao') renderProducao();
+  if(v==='receitas') renderReceitas();
+  if(v==='historico') renderCalendar();
+}
+
+function renderProducao(){
+  const list = document.getElementById('prod-list');
+  const sub = document.getElementById('prod-sub');
+  if(!list) return;
+  if(activeRecipe){
+    const r = recipes.find(x=>x.id===activeRecipe) || null;
+    if(!r){ activeRecipe=null; return renderProducao(); }
+    sub.textContent = r.name;
+    if(!r.steps || !r.steps.length){
+      list.innerHTML = '<div class="empty">Essa receita não tem etapas.<br>Edite em Receitas.</div>';
+      return;
+    }
+    let html = '<button class="backbtn" style="margin-bottom:10px" onclick="sairReceita()">‹ Trocar receita</button>';
+    r.steps.forEach(s=>{
+      const isRunning = running[s.id];
+      html += `<button class="step-btn ${isRunning?'running':''}" onclick="toggleStep('${r.id}','${s.id}','${escAttr(s.label)}')">
+        <div class="lbl"><span>${esc(s.label)}</span><span class="hint">${isRunning?'em andamento — toque para finalizar':'toque para iniciar'}</span></div>
+        <span class="timer" data-step="${s.id}">${isRunning?fmtElapsed(Date.now()-isRunning):''}</span>
+      </button>`;
+    });
+    list.innerHTML = html;
+    startTicker();
+  } else {
+    sub.textContent = 'Selecione a receita que vai preparar';
+    if(!recipes.length){
+      list.innerHTML = '<div class="empty">Nenhuma receita cadastrada ainda.<br>Vá em "Receitas" e cadastre a primeira.</div>';
+      return;
+    }
+    list.innerHTML = recipes.map(r=>
+      `<button class="recipe-btn" onclick="entrarReceita('${r.id}')">
+        <span>${esc(r.name)}</span><span class="cnt">${(r.steps||[]).length} etapa${(r.steps||[]).length!==1?'s':''}</span>
+      </button>`).join('');
+  }
+}
+function entrarReceita(id){ activeRecipe = id; renderProducao(); }
+function sairReceita(){ activeRecipe = null; renderProducao(); }
+
+async function toggleStep(recipeId, stepId, stepLabel){
+  const recipe = recipes.find(r=>r.id===recipeId);
+  if(running[stepId]){
+    const start = running[stepId];
+    const end = Date.now();
+    await db.collection('users').doc(uid).collection('history').add({
+      recipeId, recipeName: recipe?recipe.name:'', stepLabel,
+      start, end, durationSec: Math.round((end-start)/1000)
+    });
+    delete running[stepId];
+    await saveRunning();
+    toast('Etapa finalizada — ' + fmtDurationLong(Math.round((end-start)/1000)));
+  } else {
+    running[stepId] = Date.now();
+    await saveRunning();
+  }
+}
+function startTicker(){
+  if(tickInterval) clearInterval(tickInterval);
+  tickInterval = setInterval(()=>{
+    Object.keys(running).forEach(stepId=>{
+      const el = document.querySelector('[data-step="'+stepId+'"]');
+      if(el) el.textContent = fmtElapsed(Date.now()-running[stepId]);
+    });
+  },1000);
+}
+
+function renderReceitas(){
+  const list = document.getElementById('receitas-list');
+  if(!list) return;
+  if(!recipes.length){
+    list.innerHTML = '<div class="empty">Nenhuma receita ainda.<br>Toque no + para criar a primeira.</div>';
+    return;
+  }
+  list.innerHTML = recipes.map(r=>
+    `<button class="recipe-btn" onclick="abrirForm('${r.id}')">
+      <span>${esc(r.name)}</span><span class="cnt">${(r.steps||[]).length} etapa${(r.steps||[]).length!==1?'s':''} ›</span>
+    </button>`).join('');
+}
+function abrirForm(id){
+  editingRecipeId = id || null;
+  document.getElementById('f-steps').innerHTML = '';
+  document.getElementById('photo-status').textContent = '';
+  stepFieldCount = 0;
+  if(id){
+    const r = recipes.find(x=>x.id===id);
+    document.getElementById('form-title').textContent = 'Editar receita';
+    document.getElementById('f-nome').value = r.name;
+    document.getElementById('f-del').style.display = 'block';
+    (r.steps||[]).forEach(s=>addStepField(s.label));
+  } else {
+    document.getElementById('form-title').textContent = 'Nova receita';
+    document.getElementById('f-nome').value = '';
+    document.getElementById('f-del').style.display = 'none';
+    addStepField(); addStepField(); addStepField();
+  }
+  mostrar('form');
+}
+function addStepField(value){
+  stepFieldCount++;
+  const id = 'sf'+stepFieldCount;
+  const wrap = document.createElement('div');
+  wrap.className = 'steprow'; wrap.id = id;
+  wrap.innerHTML = `<input placeholder="Ex: Bater, Empacotar, Vedar" value="${value?escAttr(value):''}">
+    <button class="rm" onclick="document.getElementById('${id}').remove()">✕</button>`;
+  document.getElementById('f-steps').appendChild(wrap);
+}
+async function salvarReceita(){
+  const nome = document.getElementById('f-nome').value.trim();
+  if(!nome){ toast('Digite o nome da receita'); return; }
+  const inputs = document.querySelectorAll('#f-steps .steprow input');
+  const steps = [];
+  inputs.forEach((inp,i)=>{
+    const v = inp.value.trim();
+    if(v) steps.push({id:'st'+i+'_'+Math.random().toString(36).slice(2,6), label:v});
+  });
+  if(editingRecipeId){
+    const r = recipes.find(x=>x.id===editingRecipeId);
+    const oldSteps = r.steps||[];
+    steps.forEach(ns=>{ const m=oldSteps.find(os=>os.label===ns.label); if(m) ns.id=m.id; });
+    await db.collection('users').doc(uid).collection('recipes').doc(editingRecipeId).set({name:nome, steps});
+  } else {
+    await db.collection('users').doc(uid).collection('recipes').add({name:nome, steps});
+  }
+  toast('Receita salva');
+  mostrar('receitas');
+}
+async function excluirReceita(){
+  if(!editingRecipeId) return;
+  await db.collection('users').doc(uid).collection('recipes').doc(editingRecipeId).delete();
+  toast('Receita excluída');
+  mostrar('receitas');
+}
+
+function reconhecerFoto(ev){
+  const file = ev.target.files[0];
+  if(!file) return;
+  const status = document.getElementById('photo-status');
+  status.innerHTML = '<span class="spinner"></span>Lendo a receita da foto…';
+  document.getElementById('photo-btn').disabled = true;
+
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = e => { img.src = e.target.result; };
+  img.onload = async () => {
+    const MAX = 1536;
+    let w = img.width, h = img.height;
+    if (w > h && w > MAX) { h = h*(MAX/w); w = MAX; }
+    else if (h > MAX) { w = w*(MAX/h); h = MAX; }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    const base64 = dataUrl.split(',')[1];
+
+    try{
+      const idToken = await auth.currentUser.getIdToken();
+      const res = await fetch(WORKER_URL, {
+        method:'POST',
+        headers:{'content-type':'application/json', 'authorization':'Bearer '+idToken},
+        body: JSON.stringify({ image: base64, media_type: 'image/jpeg' })
+      });
+      const data = await res.json();
+      if(data.error){
+        status.textContent = 'Não consegui ler a foto — preencha manualmente.';
+        toast('Falha no reconhecimento');
+      } else {
+        document.getElementById('f-nome').value = data.nome || '';
+        document.getElementById('f-steps').innerHTML = '';
+        stepFieldCount = 0;
+        (data.etapas||[]).forEach(e=>addStepField(e));
+        if(!(data.etapas||[]).length) addStepField();
+        status.textContent = 'Reconhecido — confira e ajuste antes de salvar.';
+        toast('Receita reconhecida');
+      }
+    }catch(e){
+      status.textContent = 'Erro de conexão com o reconhecimento.';
+    }
+    document.getElementById('photo-btn').disabled = false;
+    ev.target.value = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function mudarMes(delta){
+  calMonth += delta;
+  if(calMonth<0){ calMonth=11; calYear--; }
+  if(calMonth>11){ calMonth=0; calYear++; }
+  selectedDay = null;
+  renderCalendar();
+}
+function renderCalendar(){
+  const grid = document.getElementById('cal-grid');
+  const title = document.getElementById('cal-title');
+  if(!grid) return;
+  const first = new Date(calYear, calMonth, 1);
+  const startDow = first.getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  title.textContent = first.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+
+  const daysWithData = new Set(history.map(h=>{
+    const d=new Date(h.start); return d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate();
+  }));
+  const today = new Date();
+
+  let html = ['D','S','T','Q','Q','S','S'].map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<startDow;i++) html += '<div class="cal-day empty2"></div>';
+  for(let day=1; day<=daysInMonth; day++){
+    const key = calYear+'-'+calMonth+'-'+day;
+    const hasData = daysWithData.has(key);
+    const isToday = today.getFullYear()===calYear && today.getMonth()===calMonth && today.getDate()===day;
+    const isSel = selectedDay===day;
+    html += `<button class="cal-day ${isToday?'today':''} ${isSel?'selected':''}" onclick="selecionarDia(${day})">
+      ${day}${hasData?'<span class="dot"></span>':''}</button>`;
+  }
+  grid.innerHTML = html;
+  renderDiaSelecionado();
+}
+function selecionarDia(day){
+  selectedDay = (selectedDay===day) ? null : day;
+  renderCalendar();
+}
+function renderDiaSelecionado(){
+  const list = document.getElementById('hist-list');
+  const sub = document.getElementById('hist-sub');
+  if(selectedDay===null){
+    sub.textContent = 'Toque em um dia para ver os registros';
+    list.innerHTML = '';
+    return;
+  }
+  const items = history.filter(h=>{
+    const d=new Date(h.start);
+    return d.getFullYear()===calYear && d.getMonth()===calMonth && d.getDate()===selectedDay;
+  }).sort((a,b)=>a.start-b.start);
+
+  const dateLabel = new Date(calYear,calMonth,selectedDay).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit'});
+  if(!items.length){
+    sub.textContent = dateLabel + ' — sem registros';
+    list.innerHTML = '<div class="empty">Nenhum registro nesse dia.</div>';
+    return;
+  }
+  const total = items.reduce((s,h)=>s+h.durationSec,0);
+  sub.textContent = dateLabel + ' — total ' + fmtDurationLong(total);
+
+  let html = '';
+  items.forEach(h=>{
+    html += `<div class="hist-item">
+      <div class="l">
+        <span class="step">${esc(h.stepLabel)}</span>
+        <span class="rec">${esc(h.recipeName)}</span>
+        <span class="times">${fmtTime(h.start)} → ${fmtTime(h.end)}</span>
+      </div>
+      <span class="dur">${fmtDurationLong(h.durationSec)}</span>
+    </div>`;
+  });
+  const byStep = {};
+  items.forEach(h=>{ byStep[h.stepLabel] = (byStep[h.stepLabel]||0) + h.durationSec; });
+  html += '<div class="card" style="margin-top:6px">';
+  Object.keys(byStep).forEach(k=>{
+    html += `<div class="summary-row"><span>${esc(k)}</span><span>${fmtDurationLong(byStep[k])}</span></div>`;
+  });
+  html += '</div>';
+  list.innerHTML = html;
+}
+
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escAttr(s){ return esc(s).replace(/"/g,'&quot;'); }
+function fmtElapsed(ms){
+  const s = Math.floor(ms/1000); const m = Math.floor(s/60); const ss = s%60;
+  return (m<10?'0':'')+m+':'+(ss<10?'0':'')+ss;
+}
+function fmtDurationLong(totalSec){
+  const m = Math.floor(totalSec/60); const s = totalSec%60;
+  if(m<=0) return s+'s';
+  const h = Math.floor(m/60); const mm = m%60;
+  if(h>0) return h+'h '+(mm>0?mm+'min':'');
+  return mm+'min'+(s>0?' '+s+'s':'');
+}
+function fmtTime(ts){ return new Date(ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
+</script>
+</body>
+</html>
