@@ -257,6 +257,7 @@ function subscribe(){
     .onSnapshot(snap=>{
       history = snap.docs.map(d=>({id:d.id, ...d.data()}));
       renderCalendar();
+      renderProducao();
     });
   unsubRunning = db.collection('users').doc(uid).collection('state').doc('running')
     .onSnapshot(doc=>{
