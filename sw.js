@@ -1,4 +1,4 @@
-const CACHE = 'registro-producao-v2';
+const CACHE = 'registro-producao-v3';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e=>{
