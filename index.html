@@ -298,7 +298,7 @@ function renderProducao(){
       list.innerHTML = '<div class="empty">Essa receita não tem etapas.<br>Edite em Receitas.</div>';
       return;
     }
-    let html = '<button class="backbtn" style="margin-bottom:10px" onclick="sairReceita()">‹ Trocar receita</button>';
+    let html = '<button class="backbtn" style="margin-bottom:10px" onclick="sairReceita()">‹ Trocar receita</button>' + '<button class="btn" style="margin-bottom:14px" onclick="finalizarReceita()">✅ Finalizar receita</button>';
     r.steps.forEach(s=>{
       const isRunning = running[s.id];
       html += `<button class="step-btn ${isRunning?'running':''}" onclick="toggleStep('${r.id}','${s.id}','${escAttr(s.label)}')">
@@ -323,8 +323,21 @@ function renderProducao(){
     startTicker();
   }
 }
-function entrarReceita(id){ activeRecipe = id; renderProducao(); }
+function entrarReceita(id){
+  activeRecipe = id;
+  const r = recipes.find(x=>x.id===id);
+  if(r) db.collection('users').doc(uid).collection('history').add({ marker:'receita_inicio', label:'▶️ Início: '+r.name, start: Date.now(), recipeId:id, recipeName:r.name });
+  renderProducao();
+}
 function sairReceita(){ activeRecipe = null; renderProducao(); }
+async function finalizarReceita(){
+  const r = recipes.find(x=>x.id===activeRecipe);
+  if(r){
+    await db.collection('users').doc(uid).collection('history').add({ marker:'receita_fim', label:'⏹️ Fim: '+r.name, start: Date.now(), recipeId:activeRecipe, recipeName:r.name });
+    toast('Receita finalizada: '+r.name);
+  }
+  sairReceita();
+}
 
 function hojeKey(){ const d=new Date(); return d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate(); }
 function getMarcoHoje(marker){
@@ -335,8 +348,13 @@ function getMarcoHoje(marker){
 }
 function renderMarcosBar(){
   const trabalho = getMarcoHoje('inicio_trabalho');
+  const fimTrabalho = getMarcoHoje('fim_trabalho');
   const almoco = getMarcoHoje('inicio_almoco');
-  return marcoBtn('inicio_trabalho','\uD83D\uDD50 In\u00edcio do trabalho', trabalho) + marcoBtn('inicio_almoco','\uD83C\uDF7D\uFE0F In\u00edcio do almo\u00e7o', almoco);
+  const fimAlmoco = getMarcoHoje('fim_almoco');
+  return marcoBtn('inicio_trabalho','\uD83D\uDD50 In\u00edcio do trabalho', trabalho)
+       + marcoBtn('fim_trabalho','\uD83C\uDFC1 Fim do trabalho', fimTrabalho)
+       + marcoBtn('inicio_almoco','\uD83C\uDF7D\uFE0F In\u00edcio do almo\u00e7o', almoco)
+       + marcoBtn('fim_almoco','\uD83C\uDF7D\uFE0F Fim do almo\u00e7o', fimAlmoco);
 }
 function marcoBtn(marker, label, marcado){
   return `<button class="step-btn ${marcado?'running':''}" onclick="marcarHorario('${marker}','${escAttr(label)}')">
