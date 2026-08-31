@@ -88,6 +88,13 @@
     border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
   @keyframes spin{to{transform:rotate(360deg);}}
   .link-btn{background:none;border:none;color:var(--accent);font-size:13.5px;padding:8px 0;width:100%;text-align:center;}
+  .foto-thumb{width:52px;height:52px;object-fit:cover;border-radius:8px;margin-left:8px;cursor:pointer;flex-shrink:0;border:1px solid var(--border);}
+  .foto-row{display:flex;gap:8px;margin-bottom:14px;}
+  .foto-row button{flex:1;background:var(--card2);border:1px solid var(--border);color:var(--text);
+    border-radius:10px;padding:10px 4px;font-size:12px;line-height:1.3;}
+  .foto-lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;
+    align-items:center;justify-content:center;padding:20px;}
+  .foto-lightbox img{max-width:100%;max-height:100%;border-radius:10px;}
 </style>
 </head>
 <body>
@@ -114,7 +121,12 @@
   <div class="view" id="view-producao">
     <h1>Produção</h1>
     <div class="sub" id="prod-sub">Selecione a receita que vai preparar</div>
+    <input type="file" accept="image/*" capture="environment" id="foto-receita-input" style="display:none" onchange="handleFotoReceita(event)">
     <div id="prod-list"></div>
+  </div>
+
+  <div class="foto-lightbox" id="foto-lightbox" onclick="fecharFotoAmpliada()">
+    <img id="foto-lightbox-img" src="">
   </div>
 
   <!-- RECEITAS -->
@@ -299,6 +311,7 @@ function renderProducao(){
       return;
     }
     let html = '<button class="backbtn" style="margin-bottom:10px" onclick="sairReceita()">‹ Trocar receita</button>' + '<button class="btn" style="margin-bottom:14px" onclick="finalizarReceita()">✅ Finalizar receita</button>';
+    html += renderFotosReceita();
     r.steps.forEach(s=>{
       const isRunning = running[s.id];
       html += `<button class="step-btn ${isRunning?'running':''}" onclick="toggleStep('${r.id}','${s.id}','${escAttr(s.label)}')">
@@ -337,6 +350,76 @@ async function finalizarReceita(){
     toast('Receita finalizada: '+r.name);
   }
   sairReceita();
+}
+
+const FOTO_LABELS = { tela:'💻 Tela do computador', mesa:'🥘 Mesa com ingredientes', produto:'🍰 Produto pronto' };
+let fotoTipoAtual = null;
+function renderFotosReceita(){
+  return '<div class="foto-row">'
+    + Object.keys(FOTO_LABELS).map(tipo=>
+        '<button onclick="tirarFotoReceita(\''+tipo+'\')">'+FOTO_LABELS[tipo]+'</button>'
+      ).join('')
+    + '</div>';
+}
+function tirarFotoReceita(tipo){
+  if(!activeRecipe) return;
+  fotoTipoAtual = tipo;
+  document.getElementById('foto-receita-input').click();
+}
+function handleFotoReceita(ev){
+  const file = ev.target.files[0];
+  ev.target.value = '';
+  const tipo = fotoTipoAtual;
+  fotoTipoAtual = null;
+  if(!file || !tipo || !activeRecipe) return;
+  const r = recipes.find(x=>x.id===activeRecipe);
+  toast('Processando foto…');
+  comprimirFoto(file, async (dataUrl, erro)=>{
+    if(erro || !dataUrl){ toast('Não consegui processar a foto — tente de novo'); return; }
+    try{
+      await db.collection('users').doc(uid).collection('history').add({
+        marker: 'foto_'+tipo,
+        label: '📷 '+(FOTO_LABELS[tipo]||tipo)+': '+(r?r.name:''),
+        start: Date.now(),
+        recipeId: activeRecipe,
+        recipeName: r?r.name:'',
+        photoData: dataUrl
+      });
+      toast('Foto salva');
+    }catch(e){
+      toast('Erro ao salvar foto');
+    }
+  });
+}
+function comprimirFoto(file, cb){
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onerror = () => cb(null, true);
+  reader.onload = e => { img.src = e.target.result; };
+  img.onerror = () => cb(null, true);
+  img.onload = () => {
+    const tentar = (max, quality) => {
+      let w = img.width, h = img.height;
+      if (w > h && w > max) { h = h*(max/w); w = max; }
+      else if (h > max) { w = w*(max/h); h = max; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      return canvas.toDataURL('image/jpeg', quality);
+    };
+    let dataUrl = tentar(1024, 0.7);
+    if(dataUrl.length > 700000) dataUrl = tentar(800, 0.5);
+    if(dataUrl.length > 900000){ cb(null, true); return; }
+    cb(dataUrl, false);
+  };
+  reader.readAsDataURL(file);
+}
+function verFotoAmpliada(src){
+  document.getElementById('foto-lightbox-img').src = src;
+  document.getElementById('foto-lightbox').style.display = 'flex';
+}
+function fecharFotoAmpliada(){
+  document.getElementById('foto-lightbox').style.display = 'none';
 }
 
 function hojeKey(){ const d=new Date(); return d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate(); }
@@ -584,6 +667,7 @@ function renderDiaSelecionado(){
           <span class="step">${esc(h.label||h.marker)}</span>
           <span class="times">${fmtTime(h.start)}</span>
         </div>
+        ${h.photoData?`<img class="foto-thumb" src="${h.photoData}" onclick="verFotoAmpliada('${h.photoData}')">`:''}
       </div>`;
       return;
     }
